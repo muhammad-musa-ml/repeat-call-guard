@@ -1,0 +1,89 @@
+file: data/llm_teacher_rollouts.jsonl
+runs: 80 (succeeded 57, failed 23, unlabelled 0)
+steps: 565; repeated steps: 175 (31.0%)
+succeeded runs with a repeated step: 43 of 57
+failed runs with a repeated step: 23 of 23
+failed runs: 184 steps, 121 of them repeated (65.8%)
+how the failed runs ended: model_repeat 23
+
+run_id  success  steps  repeats  ended_as
+P-101-0  True  8  2  success
+P-101-1  False  8  5  model_repeat
+P-101-2  True  8  2  success
+P-101-3  True  8  1  success
+P-101-4  True  7  1  success
+P-101-5  True  8  2  success
+P-101-6  True  3  0  success
+P-101-7  True  6  0  success
+P-101-8  True  6  0  success
+P-101-9  False  8  6  model_repeat
+P-101-10  True  3  0  success
+P-101-11  True  7  1  success
+P-101-12  True  6  1  success
+P-101-13  False  8  4  model_repeat
+P-101-14  False  8  6  model_repeat
+P-101-15  False  8  4  model_repeat
+P-101-16  True  6  1  success
+P-101-17  False  8  4  model_repeat
+P-101-18  False  8  6  model_repeat
+P-101-19  True  7  1  success
+P-101-20  False  8  6  model_repeat
+P-101-21  True  7  1  success
+P-101-22  True  7  1  success
+P-101-23  True  7  1  success
+P-101-24  True  7  1  success
+P-101-25  True  6  1  success
+P-101-26  True  6  1  success
+P-101-27  True  7  1  success
+P-101-28  False  8  6  model_repeat
+P-101-29  True  6  0  success
+P-101-30  True  7  1  success
+P-101-31  False  8  4  model_repeat
+P-101-32  True  8  2  success
+P-101-33  True  6  0  success
+P-101-34  True  8  1  success
+P-101-35  True  7  1  success
+P-101-36  False  8  6  model_repeat
+P-101-37  True  6  1  success
+P-101-38  True  3  0  success
+P-101-39  False  8  4  model_repeat
+P-101-40  True  8  2  success
+P-101-41  True  7  1  success
+P-101-42  False  8  6  model_repeat
+P-101-43  False  8  6  model_repeat
+P-101-44  True  8  2  success
+P-101-45  False  8  6  model_repeat
+P-101-46  True  7  1  success
+P-101-47  False  8  4  model_repeat
+P-101-48  False  8  6  model_repeat
+P-101-49  False  8  4  model_repeat
+P-101-50  True  7  1  success
+P-101-51  False  8  6  model_repeat
+P-101-52  True  7  1  success
+P-101-53  False  8  6  model_repeat
+P-101-54  False  8  6  model_repeat
+P-101-55  True  6  0  success
+P-101-56  True  8  2  success
+P-101-57  True  6  0  success
+P-101-58  True  7  1  success
+P-101-59  False  8  4  model_repeat
+P-101-60  True  8  2  success
+P-101-61  True  7  1  success
+P-101-62  True  6  0  success
+P-101-63  True  7  1  success
+P-101-64  True  6  1  success
+P-101-65  True  7  1  success
+P-101-66  True  8  2  success
+P-101-67  True  7  1  success
+P-101-68  True  7  1  success
+P-101-69  True  7  1  success
+P-101-70  True  3  0  success
+P-101-71  False  8  6  model_repeat
+P-101-72  True  6  0  success
+P-101-73  True  7  1  success
+P-101-74  True  8  2  success
+P-101-75  True  6  0  success
+P-101-76  True  7  1  success
+P-101-77  True  6  0  success
+P-101-78  True  8  2  success
+P-101-79  True  8  1  success
