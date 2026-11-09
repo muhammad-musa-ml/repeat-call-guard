@@ -11,6 +11,7 @@ SUCCESS = "success"
 UNLABELLED = "unlabelled"
 NO_CALLS = "no_calls"
 EXECUTION = "execution"
+UNKNOWN_END = "unknown_end"
 RETRIEVAL = "retrieval"
 MODEL_REPEAT = "model_repeat"
 BUDGET = "budget"
@@ -21,6 +22,8 @@ def repeat_indices(run: Run) -> list[int]:
 
     A retry after an error or an empty result is not a repeat: the first try gave
     the run nothing to build on. A call whose content is unknown is never judged.
+    A step is compared with the last usable result of the same call, and an error
+    or an empty result in between does not erase it.
     """
     latest: dict[tuple[str, str], str] = {}
     found: list[int] = []
@@ -49,6 +52,8 @@ def attribute(run: Run) -> str:
     last = run.steps[-1]
     if last.status == "error":
         return EXECUTION
+    if not last.known:
+        return UNKNOWN_END
     if last.empty:
         return RETRIEVAL
     if repeat_indices(run):

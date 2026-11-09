@@ -69,6 +69,15 @@ def test_load_rollouts_rejects_a_row_without_steps(tmp_path):
         load_rollouts(path)
 
 
+def test_success_must_be_a_boolean_or_null(tmp_path):
+    path = tmp_path / "r.jsonl"
+    write_rows(path, [row("P-1", [], success="false")])
+    with pytest.raises(ValueError, match=r":1: success must be true, false or null"):
+        load_rollouts(path)
+    write_rows(path, [row("P-1", [], success=None), row("P-2", [], success=True)])
+    assert [r.success for r in load_rollouts(path)] == [None, True]
+
+
 def test_load_rollouts_rejects_a_repeated_run_id(tmp_path):
     path = tmp_path / "r.jsonl"
     write_rows(path, [row("P-1", []), row("P-1", [])])

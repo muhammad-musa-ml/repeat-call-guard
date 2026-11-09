@@ -1,16 +1,23 @@
 """Read tool calls from trace spans in the shape Sim's executor writes.
 
-The shape comes from the TraceSpan type in apps/sim/lib/logs/types.ts of
-simstudioai/sim (checked at commit 525cd52, v0.9.50): a tool call is a child
-span with `type: "tool"`, its arguments in `input` and its result in `output`,
-and a failed call has `status: "error"` with the error inside `output`.
-`contentWithheld` marks a span whose content was removed before storage.
-The spans in the tests are built to that shape. I have not run this on an
-export from a running Sim.
+The shape comes from the TraceSpan type in apps/sim/lib/logs/types.ts and the
+span builder in apps/sim/lib/logs/execution/trace-spans/factory.ts of
+simstudioai/sim (checked at commit 525cd52, v0.9.50). A tool call is a child
+span with `type: "tool"`, its arguments in `input` and its result in `output`.
+`status` is "error" when the tool or the model segment reported one; the tool's
+own error text is in `output` and the segment's is in `errorMessage`. A result
+that is not an object is stored as `{"value": result}`, and a tool that returned
+nothing has no `output`. `contentWithheld` marks a span whose content was removed
+before storage.
+
+Legacy spans keep tool calls in `toolCalls` instead of child spans; those are not
+read, so a file of them gives no runs. The spans in the tests are built to the
+shape above. I have not run this on an export from a running Sim.
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 
@@ -21,28 +28,38 @@ def _result_text(output: object) -> str:
     return output if isinstance(output, str) else canonical_args(output)
 
 
+def _is_empty(output: object) -> bool:
+    inner = output["value"] if isinstance(output, dict) and set(output) == {"value"} else output
+    return inner is None or inner == {} or inner == [] or inner == ""
+
+
 def step_from_tool_span(span: dict) -> Step:
     call = str(span.get("name") or "(unnamed)")
     args = canonical_args(span.get("input"))
     output = span.get("output")
-    withheld = span.get("contentWithheld") is True
-    failed = span.get("status") == "error" or (isinstance(output, dict) and "error" in output)
-    if withheld or output is None:
+    status = "error" if span.get("status") == "error" else "ok"
+    if span.get("contentWithheld") is True or output is None:
         # Nothing to compare a repeat against, so the step is never judged.
-        return Step(call, args, "", "error" if failed else "ok", False, known=False)
-    return Step(
-        call,
-        args,
-        _result_text(output),
-        "error" if failed else "ok",
-        empty=output == {} or output == [] or output == "",
-    )
+        return Step(call, args, "", status, False, known=False)
+    return Step(call, args, _result_text(output), status, empty=_is_empty(output))
+
+
+def _parse_time(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def _ordered(children: list[dict]) -> list[dict]:
-    if all(isinstance(child.get("startTime"), str) for child in children):
-        return sorted(children, key=lambda child: child["startTime"])
-    return children
+    """By start time when every child has a readable one, else as given."""
+    times = [_parse_time(child.get("startTime")) for child in children]
+    if any(t is None for t in times):
+        return children
+    return [child for _, child in sorted(zip(times, children), key=lambda pair: pair[0])]
 
 
 def _outcome(span: dict) -> bool | None:

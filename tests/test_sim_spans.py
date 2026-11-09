@@ -29,9 +29,16 @@ def test_a_tool_child_becomes_a_step_with_canonical_arguments():
     assert step.usable
 
 
-def test_status_error_and_an_error_key_both_mark_a_failed_call():
-    assert step_from_tool_span(tool("open", output={"error": "boom"}, status="error")).status == "error"
-    assert step_from_tool_span(tool("open", output={"error": "boom"})).status == "error"
+def test_the_status_field_alone_marks_a_failed_call():
+    with_text = step_from_tool_span(tool("open", output={"error": "boom"}, status="error"))
+    without_text = step_from_tool_span(tool("open", output={"hits": ["a"]}, status="error"))
+    assert with_text.status == without_text.status == "error"
+    assert not without_text.usable
+
+
+def test_an_error_key_in_a_successful_calls_output_is_data_not_a_failure():
+    step = step_from_tool_span(tool("open", output={"error": None, "hits": ["a"]}))
+    assert step.status == "ok" and step.usable
 
 
 def test_an_empty_output_is_empty_and_a_missing_output_is_unknown():
@@ -39,6 +46,20 @@ def test_an_empty_output_is_empty_and_a_missing_output_is_unknown():
     assert empty.empty and empty.known and not empty.usable
     missing = step_from_tool_span(tool("search"))
     assert not missing.known and not missing.usable
+
+
+def test_results_that_are_not_objects_arrive_wrapped_and_empty_ones_are_still_empty():
+    for output in ({"value": []}, {"value": ""}, {"value": None}, {"value": {}}):
+        step = step_from_tool_span(tool("search", output=output))
+        assert step.empty and not step.usable, output
+    for output in ({"value": [1]}, {"value": "text"}, {"value": 0}, {"value": False}):
+        step = step_from_tool_span(tool("search", output=output))
+        assert not step.empty and step.usable, output
+
+
+def test_an_object_that_merely_has_a_value_key_among_others_is_not_unwrapped():
+    step = step_from_tool_span(tool("search", output={"value": [], "hits": ["a"]}))
+    assert not step.empty
 
 
 def test_withheld_content_is_never_judged():
@@ -68,6 +89,23 @@ def test_children_are_ordered_by_start_time():
     ])]
     (run,) = runs_from_spans(spans)
     assert [s.call for s in run.steps] == ["search", "open"]
+
+
+def test_start_times_are_compared_as_times_not_as_text():
+    later = tool("open", output={"x": 1}, start="2026-01-01T00:00:01.500Z")
+    earlier = tool("search", output={"x": 1}, start="2026-01-01T00:00:01Z")
+    (run,) = runs_from_spans([agent([later, earlier])])
+    assert [s.call for s in run.steps] == ["search", "open"]
+    offset = tool("fetch", output={"x": 1}, start="2026-01-01T02:00:00+02:00")
+    plain = tool("list", output={"x": 1}, start="2026-01-01T00:30:00Z")
+    (run,) = runs_from_spans([agent([plain, offset])])
+    assert [s.call for s in run.steps] == ["fetch", "list"]
+
+
+def test_an_unreadable_start_time_keeps_the_given_order():
+    first, second = tool("b", output={"x": 1}, start="soon"), tool("a", output={"x": 1})
+    (run,) = runs_from_spans([agent([first, second])])
+    assert [s.call for s in run.steps] == ["b", "a"]
 
 
 def test_spans_without_start_times_keep_their_order():

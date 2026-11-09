@@ -78,6 +78,37 @@ def test_recorded_agreement_compares_action_sequences():
     assert recorded_agreement(baseline, recorded) == (1, 2)
 
 
+def test_a_row_without_steps_is_named_not_a_keyerror(tmp_path):
+    path = tmp_path / "l.jsonl"
+    bad = row("t1", "mask", True)
+    del bad["steps"]
+    path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=r":1: missing or malformed"):
+        load_live(path)
+
+
+def test_the_report_counts_only_tasks_every_arm_has_finished():
+    rows = [
+        row("t1", "baseline", False), row("t1", "withhold", True), row("t1", "mask", True),
+        row("t2", "baseline", False), row("t2", "withhold", False),
+    ]
+    text = format_report("partial", rows)
+    assert "2 rows ignored because their task is missing from another arm" in text
+    assert "withhold against baseline, same 1 tasks" in text
+    assert "baseline      1          0" in text
+
+
+def test_the_report_says_so_when_no_task_has_every_arm():
+    rows = [row("t1", "baseline", False), row("t2", "mask", True)]
+    assert "no task has a row in every arm" in format_report("none", rows)
+
+
+def test_recorded_agreement_needs_the_same_order_not_just_the_same_actions():
+    baseline = {"t1": row("t1", "baseline", True, actions=("b", "a"))}
+    recorded = [Run("t1", (Step("a"), Step("b")), True)]
+    assert recorded_agreement(baseline, recorded) == (0, 1)
+
+
 def test_the_report_has_the_arms_the_pairing_and_the_recorded_check():
     rows = [row("t1", "baseline", False, actions=("a",)), row("t1", "mask", True)]
     recorded = [Run("t1", (Step("a"),), False)]

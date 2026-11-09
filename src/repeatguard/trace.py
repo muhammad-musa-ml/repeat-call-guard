@@ -69,9 +69,11 @@ def load_rollouts(path: str | Path) -> list[Run]:
             try:
                 run_id = row["task"]["project"]
                 steps = tuple(step_from_rollout(entry) for entry in row["steps"])
-                success = bool(row["success"])
+                success = row["success"]
             except (KeyError, TypeError, AttributeError) as exc:
                 raise ValueError(f"{path}:{number}: missing or malformed field ({exc!r})") from exc
+            if success is not None and not isinstance(success, bool):
+                raise ValueError(f"{path}:{number}: success must be true, false or null, got {success!r}")
             if run_id in seen:
                 raise ValueError(f"{path}:{number}: run id {run_id!r} appears twice")
             seen.add(run_id)

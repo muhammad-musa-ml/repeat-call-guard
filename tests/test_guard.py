@@ -42,11 +42,10 @@ def test_the_latest_result_is_the_one_returned():
     assert guard.withhold("status") == "done"
 
 
-def test_withheld_calls_are_recorded_by_name():
+def test_each_withheld_call_is_recorded():
     guard = RepeatGuard()
     guard.observe(Step("search", result="hit"))
     guard.withhold("search")
     guard.withhold("search")
     guard.withhold("open")
     assert guard.withheld == [("search", ""), ("search", "")]
-    assert guard.withheld_calls() == frozenset({"search"})

@@ -10,6 +10,18 @@ from pathlib import Path
 from .live import ARMS
 from .trace import Run
 
+REQUIRED = ("arm", "success", "tool_calls", "decisions", "withheld", "steps")
+
+
+def _check_row(row: dict) -> None:
+    for field in REQUIRED:
+        if field not in row:
+            raise KeyError(field)
+    if not isinstance(row["task"]["project"], str):
+        raise TypeError("task.project is not a string")
+    if not isinstance(row["steps"], list):
+        raise TypeError("steps is not a list")
+
 
 def load_live(path: str | Path) -> list[dict]:
     rows = []
@@ -19,14 +31,13 @@ def load_live(path: str | Path) -> list[dict]:
                 continue
             try:
                 row = json.loads(line)
-                project, arm = row["task"]["project"], row["arm"]
-                row["success"], row["tool_calls"], row["decisions"], row["withheld"]
+                _check_row(row)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"{path}:{number}: not JSON ({exc.msg})") from exc
             except (KeyError, TypeError) as exc:
                 raise ValueError(f"{path}:{number}: missing or malformed field ({exc!r})") from exc
-            if arm not in ARMS:
-                raise ValueError(f"{path}:{number}: unknown arm {arm!r}")
+            if row["arm"] not in ARMS:
+                raise ValueError(f"{path}:{number}: unknown arm {row['arm']!r}")
             rows.append(row)
     return rows
 
@@ -90,9 +101,23 @@ def recorded_agreement(baseline: dict[str, dict], recorded: list[Run]) -> tuple[
     return same, total
 
 
+def common_tasks(arms: dict[str, dict[str, dict]]) -> tuple[dict[str, dict[str, dict]], int]:
+    """Keep only the tasks every arm has finished, and count the rows dropped."""
+    if not arms:
+        return {}, 0
+    shared = set.intersection(*(set(rows) for rows in arms.values()))
+    dropped = sum(len(rows) for rows in arms.values()) - len(shared) * len(arms)
+    return {arm: {t: rows[t] for t in shared} for arm, rows in arms.items()}, dropped
+
+
 def format_report(name: str, rows: list[dict], recorded: list[Run] | None = None) -> str:
-    arms = by_arm(rows)
+    arms, dropped = common_tasks(by_arm(rows))
     lines = [f"{name}: {len(rows)} rows"]
+    if dropped:
+        lines.append(f"{dropped} rows ignored because their task is missing from another arm")
+    if not any(arms.values()):
+        lines.append("no task has a row in every arm")
+        return "\n".join(lines)
     lines.append("arm       tasks  succeeded  rate    tool calls  decisions  withheld")
     for arm in ARMS:
         if arm not in arms:

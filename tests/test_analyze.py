@@ -5,6 +5,7 @@ from repeatguard.analyze import (
     NO_CALLS,
     RETRIEVAL,
     SUCCESS,
+    UNKNOWN_END,
     UNLABELLED,
     attribute,
     repeat_indices,
@@ -57,6 +58,11 @@ def test_unknown_content_is_never_judged():
     assert repeat_indices(run(unknown, unknown)) == []
 
 
+def test_an_error_between_two_identical_results_does_not_erase_the_first():
+    assert repeat_indices(run(hit(), boom("search"), hit())) == [2]
+    assert repeat_indices(run(hit(), miss(), hit())) == [2]
+
+
 def test_an_empty_run_has_no_repeats():
     assert repeat_indices(run()) == []
 
@@ -76,6 +82,13 @@ def test_ending_on_an_error_is_execution():
 
 def test_ending_on_an_empty_result_is_retrieval():
     assert attribute(run(hit(), miss("open"))) == RETRIEVAL
+
+
+def test_ending_on_a_step_with_unknown_content_is_not_guessed_at():
+    unknown = Step("search", "", "", known=False)
+    assert attribute(run(hit(), hit(), unknown)) == UNKNOWN_END
+    assert attribute(run(unknown)) == UNKNOWN_END
+    assert attribute(run(hit(), unknown, Step("search", "", "", "error", known=False))) == EXECUTION
 
 
 def test_repeating_without_an_error_or_empty_end_is_model_repeat():
@@ -111,3 +124,10 @@ def test_summary_counts_both_outcomes():
     assert s["failed_with_repeats"] == 1
     assert (s["failed_steps"], s["failed_repeated_steps"]) == (5, 2)
     assert s["failed_causes"] == {EXECUTION: 1, MODEL_REPEAT: 1}
+
+
+def test_a_run_with_no_outcome_is_counted_apart_from_failures():
+    runs = [Run("a", (hit(),), None), Run("b", (hit(), boom()), False), Run("c", (hit(),), True)]
+    s = summarize(runs)
+    assert (s["succeeded"], s["failed"], s["unlabelled"]) == (1, 1, 1)
+    assert s["failed_steps"] == 2

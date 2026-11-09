@@ -138,3 +138,7 @@ def test_the_recorded_rollouts_hold_the_counts_the_readme_quotes(capsys):
     assert main(["analyze", str(DATA), "--json"]) == 0
     s = json.loads(capsys.readouterr().out)
     assert (s["runs"], s["succeeded"], s["failed"]) == (80, 57, 23)
+    assert (s["steps"], s["repeated_steps"]) == (565, 175)
+    assert (s["succeeded_with_repeats"], s["failed_with_repeats"]) == (43, 23)
+    assert (s["failed_steps"], s["failed_repeated_steps"]) == (184, 121)
+    assert s["failed_causes"] == {"model_repeat": 23}

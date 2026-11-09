@@ -27,7 +27,3 @@ class RepeatGuard:
         if earlier is not None:
             self.withheld.append((call, args))
         return earlier
-
-    def withheld_calls(self) -> frozenset[str]:
-        """Names of the calls withheld so far in this run."""
-        return frozenset(call for call, _ in self.withheld)
