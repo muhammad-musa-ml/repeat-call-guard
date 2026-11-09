@@ -72,9 +72,34 @@ def cmd_live(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    from .compare import format_report, load_live
+
+    recorded = load_rollouts(args.recorded) if args.recorded else None
+    sections = []
+    pooled: list[dict] = []
+    for path in args.files:
+        rows = load_live(path)
+        pooled.extend(rows)
+        sections.append(format_report(Path(path).name, rows, recorded))
+    if len(args.files) > 1:
+        sections.append(format_report("all files together", pooled))
+    text = "\n\n".join(sections)
+    if args.out:
+        Path(args.out).write_text(text + "\n", encoding="utf-8", newline="\n")
+    else:
+        print(text)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="repeatguard")
     commands = parser.add_subparsers(dest="command", required=True)
+    compare = commands.add_parser("compare", help="compare the arms of live runs on the same tasks")
+    compare.add_argument("files", nargs="+", help="JSON Lines files written by `live`")
+    compare.add_argument("--recorded", help="recorded rollouts to check the live baseline against")
+    compare.add_argument("--out", help="write the text to this file instead of printing it")
+    compare.set_defaults(func=cmd_compare)
     live = commands.add_parser("live", help="run the retrieval world against a local Ollama model")
     live.add_argument("--seed", type=int, required=True)
     live.add_argument("--tasks", type=int, default=80)

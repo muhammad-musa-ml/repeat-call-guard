@@ -63,6 +63,41 @@ def test_spans_without_the_flag_are_not_read_as_rollouts(capsys):
     assert "repeatguard:" in capsys.readouterr().err
 
 
+def test_compare_reports_each_file_and_all_together(tmp_path, monkeypatch, capsys):
+    import repeatguard.live as live
+
+    monkeypatch.setattr(live, "ollama_ask", lambda model, url: lambda prompt, allowed: "search_project")
+    first, second = tmp_path / "a.jsonl", tmp_path / "b.jsonl"
+    assert main(["live", "--seed", "5", "--tasks", "2", "--out", str(first)]) == 0
+    assert main(["live", "--seed", "6", "--tasks", "2", "--out", str(second)]) == 0
+    capsys.readouterr()
+    assert main(["compare", str(first), str(second)]) == 0
+    out = capsys.readouterr().out
+    assert "a.jsonl: 6 rows" in out and "b.jsonl: 6 rows" in out
+    assert "all files together: 12 rows" in out
+    assert "mask against baseline, same 4 tasks" in out
+
+
+def test_compare_checks_the_baseline_against_recorded_rollouts(tmp_path, capsys):
+    recorded = two_run_file(tmp_path)
+
+    def live_file(name, actions):
+        path = tmp_path / name
+        path.write_text(json.dumps({
+            "task": {"project": "P-1"}, "arm": "baseline", "success": True, "tool_calls": len(actions),
+            "decisions": len(actions), "withheld": 0,
+            "steps": [{"action": a, "observation": "", "withheld": False} for a in actions],
+        }) + "\n", encoding="utf-8")
+        return path
+
+    same = live_file("same.jsonl", ["search_org", "search_org"])
+    assert main(["compare", str(same), "--recorded", str(recorded)]) == 0
+    assert "1 of 1 tasks picked the same actions at every step" in capsys.readouterr().out
+    different = live_file("different.jsonl", ["search_org"])
+    assert main(["compare", str(different), "--recorded", str(recorded)]) == 0
+    assert "0 of 1 tasks picked the same actions at every step" in capsys.readouterr().out
+
+
 def test_live_writes_one_row_per_task_and_arm(tmp_path, monkeypatch, capsys):
     import repeatguard.live as live
 
