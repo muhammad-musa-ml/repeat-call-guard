@@ -47,6 +47,30 @@ def test_out_writes_the_text_to_a_file_with_lf_endings(tmp_path, capsys):
     assert b"\r" not in data
 
 
+def test_live_writes_one_row_per_task_and_arm(tmp_path, monkeypatch, capsys):
+    import repeatguard.live as live
+
+    monkeypatch.setattr(live, "ollama_ask", lambda model, url: lambda prompt, allowed: "search_project")
+    target = tmp_path / "live.jsonl"
+    assert main(["live", "--seed", "5", "--tasks", "2", "--out", str(target)]) == 0
+    rows = [json.loads(line) for line in target.read_text(encoding="utf-8").splitlines()]
+    assert [(r["task"]["project"], r["arm"]) for r in rows] == [
+        ("P-5-0", "baseline"), ("P-5-0", "withhold"), ("P-5-0", "mask"),
+        ("P-5-1", "baseline"), ("P-5-1", "withhold"), ("P-5-1", "mask"),
+    ]
+    assert [r["withheld"] for r in rows[:3]] == [0, 7, 7]
+    assert "2/2 baseline=0 withhold=0 mask=0" in capsys.readouterr().out
+
+
+def test_live_can_run_one_arm(tmp_path, monkeypatch):
+    import repeatguard.live as live
+
+    monkeypatch.setattr(live, "ollama_ask", lambda model, url: lambda prompt, allowed: "search_project")
+    target = tmp_path / "live.jsonl"
+    assert main(["live", "--seed", "5", "--tasks", "1", "--arms", "mask", "--out", str(target)]) == 0
+    assert len(target.read_text(encoding="utf-8").splitlines()) == 1
+
+
 def test_a_missing_file_exits_2(tmp_path, capsys):
     assert main(["analyze", str(tmp_path / "none.jsonl")]) == 2
     assert "repeatguard:" in capsys.readouterr().err

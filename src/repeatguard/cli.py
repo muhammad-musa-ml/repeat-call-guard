@@ -51,9 +51,39 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_live(args: argparse.Namespace) -> int:
+    from .live import ollama_ask, episode
+    from .world import make_tasks
+
+    ask = ollama_ask(args.model, args.url)
+    tasks = make_tasks(args.tasks, seed=args.seed, miss_rate=args.miss_rate)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    wins = {arm: 0 for arm in args.arms}
+    with out.open("w", encoding="utf-8", newline="\n") as handle:
+        for index, task in enumerate(tasks, 1):
+            for arm in args.arms:
+                row = episode(task, ask, arm)
+                handle.write(json.dumps(row) + "\n")
+                handle.flush()
+                wins[arm] += int(row["success"])
+            print(f"{index}/{len(tasks)} " + " ".join(f"{a}={wins[a]}" for a in args.arms), flush=True)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="repeatguard")
     commands = parser.add_subparsers(dest="command", required=True)
+    live = commands.add_parser("live", help="run the retrieval world against a local Ollama model")
+    live.add_argument("--seed", type=int, required=True)
+    live.add_argument("--tasks", type=int, default=80)
+    live.add_argument("--miss-rate", type=float, default=0.25)
+    live.add_argument("--arms", nargs="+", default=["baseline", "withhold", "mask"],
+                      choices=["baseline", "withhold", "mask"])
+    live.add_argument("--model", default="qwen3:4b-instruct-2507-q4_K_M")
+    live.add_argument("--url", default="http://127.0.0.1:11434/api/chat")
+    live.add_argument("--out", required=True, help="JSON Lines file, one row per task and arm")
+    live.set_defaults(func=cmd_live)
     analyze = commands.add_parser("analyze", help="count repeated calls in recorded rollouts")
     analyze.add_argument("file")
     analyze.add_argument("--json", action="store_true", help="print the summary as JSON")
