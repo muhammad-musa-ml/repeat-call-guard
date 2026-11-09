@@ -47,6 +47,22 @@ def test_out_writes_the_text_to_a_file_with_lf_endings(tmp_path, capsys):
     assert b"\r" not in data
 
 
+def test_analyze_reads_sim_spans_with_the_spans_flag(capsys):
+    example = Path(__file__).resolve().parent.parent / "examples" / "spans.json"
+    assert main(["analyze", str(example), "--spans", "--runs"]) == 0
+    out = capsys.readouterr().out
+    assert "runs: 2 (succeeded 1, failed 1, unlabelled 0)" in out
+    assert "steps: 5; repeated steps: 2 (40.0%)" in out
+    assert "agent-lookup  False  4  2  execution" in out
+    assert "agent-summary  True  1  0  success" in out
+
+
+def test_spans_without_the_flag_are_not_read_as_rollouts(capsys):
+    example = Path(__file__).resolve().parent.parent / "examples" / "spans.json"
+    assert main(["analyze", str(example)]) == 2
+    assert "repeatguard:" in capsys.readouterr().err
+
+
 def test_live_writes_one_row_per_task_and_arm(tmp_path, monkeypatch, capsys):
     import repeatguard.live as live
 

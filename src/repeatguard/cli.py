@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 
 from .analyze import report, summarize
+from .sim_spans import load_spans
 from .trace import load_rollouts
 
 
@@ -39,7 +40,7 @@ def format_runs(runs: list) -> str:
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
-    runs = load_rollouts(args.file)
+    runs = load_spans(args.file) if args.spans else load_rollouts(args.file)
     summary = summarize(runs)
     text = json.dumps(summary, indent=2, sort_keys=True) if args.json else format_summary(args.file, summary)
     if args.runs:
@@ -86,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     live.set_defaults(func=cmd_live)
     analyze = commands.add_parser("analyze", help="count repeated calls in recorded rollouts")
     analyze.add_argument("file")
+    analyze.add_argument("--spans", action="store_true", help="FILE holds Sim trace spans, not rollouts")
     analyze.add_argument("--json", action="store_true", help="print the summary as JSON")
     analyze.add_argument("--runs", action="store_true", help="also list every run")
     analyze.add_argument("--out", help="write the text to this file instead of printing it")

@@ -1,0 +1,39 @@
+{
+  "traceSpans": [
+    {
+      "id": "agent-lookup",
+      "name": "Lookup agent",
+      "type": "agent",
+      "status": "error",
+      "startTime": "2026-01-01T00:00:00Z",
+      "endTime": "2026-01-01T00:00:09Z",
+      "duration": 9000,
+      "children": [
+        {"id": "m1", "name": "model", "type": "model", "duration": 700},
+        {"id": "t1", "name": "search_orders", "type": "tool", "status": "success",
+         "startTime": "2026-01-01T00:00:01Z", "endTime": "2026-01-01T00:00:02Z", "duration": 1000,
+         "input": {"customer": "C-17"}, "output": {"hits": ["O-1", "O-2"]}},
+        {"id": "t2", "name": "search_orders", "type": "tool", "status": "success",
+         "startTime": "2026-01-01T00:00:03Z", "endTime": "2026-01-01T00:00:04Z", "duration": 1000,
+         "input": {"customer": "C-17"}, "output": {"hits": ["O-1", "O-2"]}},
+        {"id": "t3", "name": "search_orders", "type": "tool", "status": "success",
+         "startTime": "2026-01-01T00:00:05Z", "endTime": "2026-01-01T00:00:06Z", "duration": 1000,
+         "input": {"customer": "C-17"}, "output": {"hits": ["O-1", "O-2"]}},
+        {"id": "t4", "name": "get_order", "type": "tool", "status": "error",
+         "startTime": "2026-01-01T00:00:07Z", "endTime": "2026-01-01T00:00:08Z", "duration": 1000,
+         "input": {"order": "O-9"}, "output": {"error": "order not found"}}
+      ]
+    },
+    {
+      "id": "agent-summary",
+      "name": "Summary agent",
+      "type": "agent",
+      "status": "success",
+      "children": [
+        {"id": "t5", "name": "get_order", "type": "tool", "status": "success",
+         "startTime": "2026-01-01T00:01:01Z", "endTime": "2026-01-01T00:01:02Z", "duration": 1000,
+         "input": {"order": "O-1"}, "output": {"total": 41.5}}
+      ]
+    }
+  ]
+}
