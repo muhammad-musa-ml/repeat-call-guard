@@ -87,6 +87,15 @@ def test_a_row_without_steps_is_named_not_a_keyerror(tmp_path):
         load_live(path)
 
 
+def test_a_row_whose_steps_is_not_a_list_is_named(tmp_path):
+    path = tmp_path / "l.jsonl"
+    bad = row("t1", "mask", True)
+    bad["steps"] = "sp spa spa"
+    path.write_text(json.dumps(bad) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=r":1: missing or malformed.*steps is not a list"):
+        load_live(path)
+
+
 def test_the_report_counts_only_tasks_every_arm_has_finished():
     rows = [
         row("t1", "baseline", False), row("t1", "withhold", True), row("t1", "mask", True),
